@@ -12,7 +12,9 @@ class SyncTrafficUseCase:
 
     async def execute(self) -> int:
         snapshots = await self._reader.read_snapshots()
-        for snap in snapshots:
-            await self._repo.save_snapshot(snap)
-        logger.info("sync done: %d clients saved", len(snapshots))
-        return len(snapshots)
+        if not snapshots:
+            logger.warning("sync: no snapshots read, skipping write")
+            return 0
+        count = await self._repo.save_snapshots(snapshots)
+        logger.info("sync: saved %d snapshots", count)
+        return count

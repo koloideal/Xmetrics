@@ -7,7 +7,7 @@ from pydantic import BaseModel, field_validator
 from xmetrics.api.deps import require_session
 from xmetrics.core.config import Settings
 from xmetrics.core.security import hash_password, verify_password
-from xmetrics.scheduler.setup import reschedule
+from xmetrics.scheduler.setup import Scheduler
 
 router = APIRouter(prefix="/api/settings", tags=["settings"], route_class=DishkaRoute)
 
@@ -60,13 +60,14 @@ async def get_settings(
 @router.put("/xui")
 async def update_xui(
     _: Annotated[str, Depends(require_session)],
-    settings: FromDishka[Settings],
     body: XuiSettingsIn,
+    settings: FromDishka[Settings],
+    scheduler: FromDishka[Scheduler]
 ) -> dict:
     settings.xui.db_path = body.db_path
     settings.xui.sync_cron = body.sync_cron
     settings.save()
-    reschedule(body.sync_cron)
+    scheduler.reschedule(body.sync_cron)
     return {"ok": True}
 
 

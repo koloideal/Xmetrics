@@ -1,12 +1,13 @@
 [app]
-secret_key = "change-me-to-a-random-64-char-string"
-history_weeks = 52
-session_max_age = 604800  
+db_path = './xmetrics.db'
+secret_key = '8fit86d65d86d5c7f8yf0f65d7ic76f'
+history_weeks = 24
+session_max_age = 86400
 
 [admin]
-username = "admin"
-password_hash = ""       
+username = 'admin'
+password_hash = '$2b$12$6x3aWC3MIXkB7FvgRz.rte8gVCsEh3ZMnM8EFVA.XOV81QeHKeY6y'
 
 [xui]
-db_path = "/etc/x-ui/x-ui.db"
-sync_cron = "0 * * * *"  
+db_path = '/etc/x-ui/x-ui.db'
+sync_cron = '0 * * * *'

@@ -7,6 +7,7 @@ CONFIG_PATH = Path(__file__).parent.parent.parent / "config.toml"
 
 @dataclass
 class AppConfig:
+    db_path: str
     secret_key: str
     history_weeks: int
     session_max_age: int

@@ -26,7 +26,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 def _bootstrap_password(settings: Settings) -> None:
     if settings.admin.password_hash:
         return
-    generated = secrets.token_urlsafe(16)
+    generated = secrets.token_urlsafe(6)
     settings.admin.password_hash = hash_password(generated)
     settings.save()
     logger.warning("=" * 60)
@@ -42,19 +42,15 @@ async def lifespan(app: FastAPI):
 
     _bootstrap_password(settings)
 
-    engine = make_engine("./xmetrics.db")
+    engine = make_engine(settings.app.db_path)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await engine.dispose()
 
-    scheduler = Scheduler(container, settings.xui.sync_cron)
-    scheduler.start()
-    scheduler.start()
     logger.info("scheduler started: '%s'", settings.xui.sync_cron)
 
     yield
 
-    scheduler.stop()
     await container.close()
 
 
@@ -69,7 +65,8 @@ def create_app() -> FastAPI:
     app.include_router(settings_router)
 
     if STATIC_DIR.exists():
-        app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+        app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+        app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="spa")
 
     return app
 
