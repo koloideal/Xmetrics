@@ -10,12 +10,12 @@ from fastapi.staticfiles import StaticFiles
 
 from xmetrics.api.auth import router as auth_router
 from xmetrics.api.dashboard import router as dashboard_router
-from xmetrics.api.settings_router import router as settings_router
+from xmetrics.api.settings import router as settings_router
 from xmetrics.container import AppProvider
 from xmetrics.core.config import Settings
 from xmetrics.core.security import hash_password
 from xmetrics.infrastructure.db import Base, make_engine
-from xmetrics.scheduler.setup import build_scheduler
+from xmetrics.scheduler.setup import Scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -42,23 +42,24 @@ async def lifespan(app: FastAPI):
 
     _bootstrap_password(settings)
 
-    engine = make_engine("./flowwatch.db")
+    engine = make_engine("./xmetrics.db")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await engine.dispose()
 
-    scheduler = build_scheduler(container, settings.xui.sync_cron)
+    scheduler = Scheduler(container, settings.xui.sync_cron)
+    scheduler.start()
     scheduler.start()
     logger.info("scheduler started: '%s'", settings.xui.sync_cron)
 
     yield
 
-    scheduler.shutdown(wait=False)
+    scheduler.stop()
     await container.close()
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Flowwatch", lifespan=lifespan)
+    app = FastAPI(title="Xmetrics", lifespan=lifespan)
 
     container = make_async_container(AppProvider(), FastapiProvider())
     setup_dishka(container, app)

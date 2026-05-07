@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Date, Integer, String, UniqueConstraint
+import datetime
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -11,12 +12,12 @@ class SnapshotRow(Base):
     __tablename__ = "snapshots"
     __table_args__ = (UniqueConstraint("date", "email", name="uq_snapshot_date_email"),)
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    date = Column(Date, nullable=False, index=True)
-    email = Column(String, nullable=False)
-    inbound_id = Column(Integer, nullable=False)
-    up = Column(Integer, nullable=False, default=0)
-    down = Column(Integer, nullable=False, default=0)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    date: Mapped[datetime.date] = mapped_column(nullable=False, index=True)
+    email: Mapped[str] = mapped_column(nullable=False)
+    inbound_id: Mapped[int] = mapped_column(nullable=False)
+    up: Mapped[int] = mapped_column(nullable=False, default=0)
+    down: Mapped[int] = mapped_column(nullable=False, default=0)
 
 
 def make_engine(db_path: str) -> AsyncEngine:

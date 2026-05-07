@@ -1,4 +1,6 @@
-from dishka.integrations.fastapi import FromDishka, inject
+from typing import Annotated
+
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, Form, HTTPException, Response, status
 from itsdangerous import URLSafeTimedSerializer
 
@@ -6,16 +8,15 @@ from xmetrics.api.deps import require_session
 from xmetrics.core.config import Settings
 from xmetrics.core.security import verify_password
 
-router = APIRouter(tags=["auth"])
+router = APIRouter(tags=["auth"], route_class=DishkaRoute)
 
 
 @router.post("/login")
-@inject
 async def login(
     response: Response,
+    username: Annotated[str, Form()],
+    password: Annotated[str, Form()],
     settings: FromDishka[Settings],
-    username: str = Form(),
-    password: str = Form()
 ) -> dict:
     if username != settings.admin.username or not verify_password(
         password, settings.admin.password_hash

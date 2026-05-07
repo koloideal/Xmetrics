@@ -10,19 +10,35 @@ from xmetrics.scheduler.sync_task import SyncTrafficUseCase
 logger = logging.getLogger(__name__)
 
 
-def build_scheduler(container: AsyncContainer, cron_expr: str) -> AsyncIOScheduler:
-    scheduler = AsyncIOScheduler()
+def _make_trigger(cron_expr: str) -> CronTrigger:
+    parts = cron_expr.strip().split()
+    minute, hour, day, month, dow = (parts + ["*"] * 5)[:5]
+    return CronTrigger(minute=minute, hour=hour, day=day, month=month, day_of_week=dow)
 
-    async def _job() -> None:
-        async with container() as request_container:
-            reader = await request_container.get(IXuiReader)
-            repo = await request_container.get(ISnapshotRepository)
+
+class Scheduler:
+    def __init__(self, container: AsyncContainer, cron_expr: str) -> None:
+        self._container = container
+        self._scheduler = AsyncIOScheduler()
+        self._scheduler.add_job(
+            self._job,
+            _make_trigger(cron_expr),
+            id="sync_traffic",
+            replace_existing=True,
+        )
+
+    async def _job(self) -> None:
+        async with self._container() as rc:
+            reader = await rc.get(IXuiReader)
+            repo = await rc.get(ISnapshotRepository)
             await SyncTrafficUseCase(reader, repo).execute()
 
-    parts = cron_expr.strip().split()
-    minute, hour, day, month, day_of_week = (parts + ["*", "*", "*", "*", "*"])[:5]
-    trigger = CronTrigger(
-        minute=minute, hour=hour, day=day, month=month, day_of_week=day_of_week
-    )
-    scheduler.add_job(_job, trigger, id="sync_traffic", replace_existing=True)
-    return scheduler
+    def start(self) -> None:
+        self._scheduler.start()
+
+    def stop(self) -> None:
+        self._scheduler.shutdown(wait=False)
+
+    def reschedule(self, cron_expr: str) -> None:
+        self._scheduler.reschedule_job("sync_traffic", trigger=_make_trigger(cron_expr))
+        logger.info("rescheduled sync to '%s'", cron_expr)

@@ -1,0 +1,17 @@
+[Unit]
+Description=Xmetrics — 3x-ui traffic dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/bots/xmetrics
+ExecStart=/bots/xmetrics/.venv/bin/uvicorn xmetrics.__main__:app --host 127.0.0.1 --port 8101
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=xmetrics
+
+[Install]
+WantedBy=multi-user.target
