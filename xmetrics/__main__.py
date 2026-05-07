@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Xmetrics", lifespan=lifespan)
+    app = FastAPI(title="Xmetrics", root_path="/metrics", lifespan=lifespan)
 
     container = make_async_container(AppProvider(), FastapiProvider())
     setup_dishka(container, app)
