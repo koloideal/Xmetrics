@@ -153,6 +153,7 @@ function buildChart(labels, up, down) {
 // ── STATE ────────────────────────────────────────────────────────
 let allWeekly = [];
 let currentWeeks = 16;
+let currentView = 'weeks'; // 'weeks' or 'days'
 
 // ── DATA LOAD ────────────────────────────────────────────────────
 async function loadWeekly(weeks) {
@@ -160,6 +161,12 @@ async function loadWeekly(weeks) {
   if (!data) return;
   allWeekly = data;
   renderWeekly(data);
+}
+
+async function loadDaily() {
+  const data = await api.get('/api/daily');
+  if (!data) return;
+  renderDaily(data);
 }
 
 function renderWeekly(data) {
@@ -185,6 +192,29 @@ function renderWeekly(data) {
   document.getElementById('kpi-avg').textContent   = avg.toFixed(1);
 }
 
+function renderDaily(data) {
+  const empty = document.getElementById('chart-empty');
+  if (!data.length) { empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+
+  const labels = data.map(d => d.date);
+  const up     = data.map(d => +d.upload_gb.toFixed(3));
+  const down   = data.map(d => +d.download_gb.toFixed(3));
+  const totals = data.map(d => +d.total_gb.toFixed(3));
+
+  buildChart(labels, up, down);
+
+  const totalAll = totals.reduce((a, b) => a + b, 0);
+  const peak     = Math.max(...totals);
+  const avg      = totalAll / totals.length || 0;
+  const last     = totals.at(-1) || 0;
+
+  document.getElementById('kpi-total').textContent = totalAll.toFixed(1);
+  document.getElementById('kpi-week').textContent  = last.toFixed(1);
+  document.getElementById('kpi-peak').textContent  = peak.toFixed(1);
+  document.getElementById('kpi-avg').textContent   = avg.toFixed(1);
+}
+
 async function loadClients() {
   const data = await api.get('/api/clients');
   if (!data) return;
@@ -197,13 +227,9 @@ async function loadClients() {
     return;
   }
 
-  const BYTES = 1073741824;
   const maxTotal = Math.max(...data.map(d => d.total_gb));
 
   data.forEach(d => {
-    const upGb   = (d.upload_bytes   / BYTES).toFixed(2);
-    const downGb = (d.download_bytes / BYTES).toFixed(2);
-    const total  = d.upload_bytes + d.download_bytes;
     const pct = maxTotal > 0 ? (d.total_gb / maxTotal * 100).toFixed(1) : 0;
 
     const tr = document.createElement('tr');
@@ -226,14 +252,14 @@ async function loadSettings() {
   const data = await api.get('/api/settings');
   if (!data) return;
 
-  document.getElementById('s-xui-db-path').value  = data.xui_db_path  || '';
-  document.getElementById('s-app-db-path').value  = data.app_db_path  || '';
-  document.getElementById('s-sync-cron').value    = data.sync_cron    || '';
-  document.getElementById('s-history').value      = data.history_weeks || 24;
-  document.getElementById('info-username').textContent   = data.admin_username || '—';
-  document.getElementById('info-cron').textContent       = data.sync_cron      || '—';
-  document.getElementById('info-xui-path').textContent   = data.xui_db_path    || '—';
-  document.getElementById('info-app-path').textContent   = data.app_db_path    || '—';
+  document.getElementById('s-xui-db-path').value  = data.xui_db_path    || '';
+  document.getElementById('s-app-db-path').value  = data.app_db_path    || '';
+  document.getElementById('s-sync-cron').value    = data.sync_cron      || '';
+  document.getElementById('s-history').value      = data.history_weeks  || 24;
+  document.getElementById('info-username').textContent = data.admin_username || '—';
+  document.getElementById('info-cron').textContent     = data.sync_cron      || '—';
+  document.getElementById('info-xui-path').textContent = data.xui_db_path    || '—';
+  document.getElementById('info-app-path').textContent = data.app_db_path    || '—';
 }
 
 // ── AUTH ─────────────────────────────────────────────────────────
@@ -288,6 +314,17 @@ function setRange(weeks) {
   loadWeekly(weeks);
 }
 
+function setView(view) {
+  currentView = view;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  document.querySelectorAll('.range-btns').forEach(el => el.style.display = view === 'weeks' ? 'flex' : 'none');
+  if (view === 'weeks') {
+    loadWeekly(currentWeeks);
+  } else {
+    loadDaily();
+  }
+}
+
 // ── INIT ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -325,6 +362,11 @@ document.addEventListener('DOMContentLoaded', () => {
     b.addEventListener('click', () => setRange(+b.dataset.w))
   );
 
+  // View toggle
+  document.querySelectorAll('.view-btn').forEach(b =>
+    b.addEventListener('click', () => setView(b.dataset.view))
+  );
+
   // Manual sync
   document.getElementById('btn-sync').addEventListener('click', async () => {
     const btn = document.getElementById('btn-sync');
@@ -346,9 +388,9 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     try {
       await api.put('/api/settings/xui', {
-        db_path:      document.getElementById('s-xui-db-path').value.trim(),
-        app_db_path:  document.getElementById('s-app-db-path').value.trim(),
-        sync_cron:    document.getElementById('s-sync-cron').value.trim(),
+        db_path:       document.getElementById('s-xui-db-path').value.trim(),
+        app_db_path:   document.getElementById('s-app-db-path').value.trim(),
+        sync_cron:     document.getElementById('s-sync-cron').value.trim(),
         history_weeks: +document.getElementById('s-history').value,
       });
       toast('Настройки сохранены');

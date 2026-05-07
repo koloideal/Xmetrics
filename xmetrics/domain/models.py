@@ -20,6 +20,14 @@ class WeeklyTraffic:
 
 
 @dataclass(frozen=True, slots=True)
+class DailyTraffic:
+    date: str        # "2026-05-07"
+    upload_gb: float
+    download_gb: float
+    total_gb: float
+
+
+@dataclass(frozen=True, slots=True)
 class ClientStat:
     email: str
     inbound_id: int

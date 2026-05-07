@@ -45,6 +45,7 @@ class Settings:
 
     def save(self) -> None:
         content = f"""[app]
+db_path = {self.app.db_path!r}
 secret_key = {self.app.secret_key!r}
 history_weeks = {self.app.history_weeks}
 session_max_age = {self.app.session_max_age}

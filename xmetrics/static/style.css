@@ -402,6 +402,35 @@ main { flex: 1; padding: 28px; max-width: 1200px; width: 100%; margin: 0 auto; }
 .range-btn:hover { color: var(--text); background: var(--surface-2); }
 .range-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(79,142,247,.3); }
 
+/* ── VIEW TOGGLE ── */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.view-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.view-btn {
+  font-family: var(--font);
+  font-size: .65rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid var(--border-2);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.view-btn:hover { color: var(--text); background: var(--surface-2); }
+.view-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(79,142,247,.3); }
+
 /* ── TABLE ── */
 .tbl { width: 100%; border-collapse: collapse; font-size: .8rem; }
 

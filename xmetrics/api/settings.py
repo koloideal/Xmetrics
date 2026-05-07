@@ -14,7 +14,9 @@ router = APIRouter(prefix="/api/settings", tags=["settings"], route_class=Dishka
 
 class XuiSettingsIn(BaseModel):
     db_path: str
+    app_db_path: str
     sync_cron: str
+    history_weeks: int
 
     @field_validator("sync_cron")
     @classmethod
@@ -23,6 +25,13 @@ class XuiSettingsIn(BaseModel):
         if len(parts) != 5:
             raise ValueError("Cron должен содержать ровно 5 полей")
         return v.strip()
+
+    @field_validator("history_weeks")
+    @classmethod
+    def valid_history(cls, v: int) -> int:
+        if v < 1 or v > 104:
+            raise ValueError("История должна быть от 1 до 104 недель")
+        return v
 
 
 class PasswordChangeIn(BaseModel):
@@ -39,6 +48,7 @@ class PasswordChangeIn(BaseModel):
 
 class SettingsOut(BaseModel):
     xui_db_path: str
+    app_db_path: str
     sync_cron: str
     history_weeks: int
     admin_username: str
@@ -51,6 +61,7 @@ async def get_settings(
 ) -> SettingsOut:
     return SettingsOut(
         xui_db_path=settings.xui.db_path,
+        app_db_path=settings.app.db_path,
         sync_cron=settings.xui.sync_cron,
         history_weeks=settings.app.history_weeks,
         admin_username=settings.admin.username,
@@ -65,7 +76,9 @@ async def update_xui(
     scheduler: FromDishka[Scheduler]
 ) -> dict:
     settings.xui.db_path = body.db_path
+    settings.app.db_path = body.app_db_path
     settings.xui.sync_cron = body.sync_cron
+    settings.app.history_weeks = body.history_weeks
     settings.save()
     scheduler.reschedule(body.sync_cron)
     return {"ok": True}

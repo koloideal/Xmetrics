@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from xmetrics.api.deps import require_session
 from xmetrics.core.config import Settings
 from xmetrics.domain.interfaces import ISnapshotRepository, IXuiReader
-from xmetrics.domain.models import ClientStat, WeeklyTraffic
+from xmetrics.domain.models import ClientStat, DailyTraffic, WeeklyTraffic
 from xmetrics.scheduler.sync_task import SyncTrafficUseCase
 
 router = APIRouter(tags=["dashboard"], route_class=DishkaRoute)
@@ -22,6 +22,15 @@ async def weekly(
 ) -> list[WeeklyTraffic]:
     since = datetime.date.today() - datetime.timedelta(weeks=min(weeks, settings.app.history_weeks))
     return await repo.get_weekly_totals(since)
+
+
+@router.get("/api/daily")
+async def daily(
+    _: Annotated[str, Depends(require_session)],
+    repo: FromDishka[ISnapshotRepository],
+) -> list[DailyTraffic]:
+    since = datetime.date.today() - datetime.timedelta(days=7)
+    return await repo.get_daily_totals(since)
 
 
 @router.get("/api/clients")

@@ -5,7 +5,7 @@ from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from xmetrics.domain.interfaces import ISnapshotRepository
-from xmetrics.domain.models import ClientStat, ClientSnapshot, WeeklyTraffic
+from xmetrics.domain.models import ClientStat, ClientSnapshot, DailyTraffic, WeeklyTraffic
 from xmetrics.infrastructure.db import SnapshotRow
 
 
@@ -13,24 +13,26 @@ class SnapshotRepository(ISnapshotRepository):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._factory = session_factory
 
-    async def save_snapshot(self, snapshot: ClientSnapshot) -> None:
+    async def save_snapshots(self, snapshots: list[ClientSnapshot]) -> int:
         async with self._factory() as session:
-            stmt = (
-                insert(SnapshotRow)
-                .values(
-                    date=snapshot.date,
-                    email=snapshot.email,
-                    inbound_id=snapshot.inbound_id,
-                    up=snapshot.up,
-                    down=snapshot.down,
+            for snapshot in snapshots:
+                stmt = (
+                    insert(SnapshotRow)
+                    .values(
+                        date=snapshot.date,
+                        email=snapshot.email,
+                        inbound_id=snapshot.inbound_id,
+                        up=snapshot.up,
+                        down=snapshot.down,
+                    )
+                    .on_conflict_do_update(
+                        index_elements=["date", "email"],
+                        set_={"up": snapshot.up, "down": snapshot.down},
+                    )
                 )
-                .on_conflict_do_update(
-                    index_elements=["date", "email"],
-                    set_={"up": snapshot.up, "down": snapshot.down},
-                )
-            )
-            await session.execute(stmt)
+                await session.execute(stmt)
             await session.commit()
+        return len(snapshots)
 
     async def get_weekly_totals(self, since: datetime.date) -> list[WeeklyTraffic]:
         async with self._factory() as session:
@@ -63,6 +65,36 @@ class SnapshotRepository(ISnapshotRepository):
             u = week_up[week] / 1024**3
             d = week_down[week] / 1024**3
             result.append(WeeklyTraffic(week=week, upload_gb=round(u, 3), download_gb=round(d, 3), total_gb=round(u + d, 3)))
+        return result
+
+    async def get_daily_totals(self, since: datetime.date) -> list[DailyTraffic]:
+        async with self._factory() as session:
+            rows = (
+                await session.execute(
+                    select(SnapshotRow).where(SnapshotRow.date >= since).order_by(SnapshotRow.date)
+                )
+            ).scalars().all()
+
+        # compute daily diff per email then group by date
+        from collections import defaultdict
+
+        prev: dict[str, tuple[int, int]] = {}
+        day_up: dict[datetime.date, int] = defaultdict(int)
+        day_down: dict[datetime.date, int] = defaultdict(int)
+
+        for row in rows:
+            prev_up, prev_down = prev.get(row.email, (0, 0))
+            diff_up = max(0, row.up - prev_up)
+            diff_down = max(0, row.down - prev_down)
+            prev[row.email] = (row.up, row.down)
+            day_up[row.date] += diff_up
+            day_down[row.date] += diff_down
+
+        result: list[DailyTraffic] = []
+        for day in sorted(set(day_up) | set(day_down)):
+            u = day_up[day] / 1024**3
+            d = day_down[day] / 1024**3
+            result.append(DailyTraffic(date=str(day), upload_gb=round(u, 3), download_gb=round(d, 3), total_gb=round(u + d, 3)))
         return result
 
     async def get_latest_client_stats(self) -> list[ClientStat]:
