@@ -23,7 +23,7 @@ const api = {
     const fd = new FormData();
     fd.append('username', username);
     fd.append('password', password);
-    const r = await fetch('/auth/login', { method: 'POST', body: fd, credentials: 'include' });
+    const r = await fetch('auth/login', { method: 'POST', body: fd, credentials: 'include' });
     if (!r.ok) {
       const e = await r.json().catch(() => ({ detail: 'Ошибка' }));
       throw new Error(e.detail);
@@ -157,14 +157,14 @@ let currentView = 'weeks'; // 'weeks' or 'days'
 
 // ── DATA LOAD ────────────────────────────────────────────────────
 async function loadWeekly(weeks) {
-  const data = await api.get(`/api/weekly?weeks=${weeks}`);
+  const data = await api.get(`api/weekly?weeks=${weeks}`);
   if (!data) return;
   allWeekly = data;
   renderWeekly(data);
 }
 
 async function loadDaily() {
-  const data = await api.get('/api/daily');
+  const data = await api.get('api/daily');
   if (!data) return;
   renderDaily(data);
 }
@@ -216,7 +216,7 @@ function renderDaily(data) {
 }
 
 async function loadClients() {
-  const data = await api.get('/api/clients');
+  const data = await api.get('api/clients');
   if (!data) return;
 
   const tbody = document.getElementById('clients-body');
@@ -249,7 +249,7 @@ async function loadClients() {
 }
 
 async function loadSettings() {
-  const data = await api.get('/api/settings');
+  const data = await api.get('api/settings');
   if (!data) return;
 
   document.getElementById('s-xui-db-path').value  = data.xui_db_path    || '';
@@ -274,7 +274,7 @@ function showApp() {
 }
 
 async function checkSession() {
-  const me = await api.get('/auth/me').catch(() => null);
+  const me = await api.get('auth/me').catch(() => null);
   if (me && me.username) {
     document.getElementById('header-user').textContent = me.username;
     showApp();
@@ -287,7 +287,7 @@ async function checkSession() {
 }
 
 async function loadSyncStatus() {
-  const data = await api.get('/api/settings').catch(() => null);
+  const data = await api.get('api/settings').catch(() => null);
   if (!data) return;
   const badge = document.getElementById('sync-badge');
   if (data.xui_db_path) {
@@ -348,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Logout
   document.getElementById('btn-logout').addEventListener('click', async () => {
-    await api.post('/auth/logout').catch(() => {});
+    await api.post('auth/logout').catch(() => {});
     showLogin();
   });
 
@@ -372,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('btn-sync');
     btn.disabled = true;
     try {
-      const r = await api.post('/api/sync');
+      const r = await api.post('api/sync');
       toast(`Синхронизировано: ${r.synced} записей`);
       loadWeekly(currentWeeks);
       loadClients();
@@ -387,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('form-xui').addEventListener('submit', async e => {
     e.preventDefault();
     try {
-      await api.put('/api/settings/xui', {
+      await api.put('api/settings/xui', {
         db_path:       document.getElementById('s-xui-db-path').value.trim(),
         app_db_path:   document.getElementById('s-app-db-path').value.trim(),
         sync_cron:     document.getElementById('s-sync-cron').value.trim(),
@@ -407,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cp = document.getElementById('s-confirm-pass').value;
     if (np !== cp) { toast('Пароли не совпадают', 'err'); return; }
     try {
-      await api.put('/api/settings/password', {
+      await api.put('api/settings/password', {
         current_password: document.getElementById('s-cur-pass').value,
         new_password: np,
       });
