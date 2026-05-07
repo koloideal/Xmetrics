@@ -1,18 +1,59 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import tomllib
+from dataclasses import dataclass, field
+from pathlib import Path
+
+CONFIG_PATH = Path(__file__).parent.parent.parent / "config.toml"
 
 
-class Settings(BaseSettings):
+@dataclass
+class AppConfig:
     secret_key: str
-    admin_username: str
-    admin_password: str
-    xui_db_path: str
-    app_db_path: str = "./xmetrics.db"
-    sync_cron: str = "0 * * * *"
-    history_weeks: int = 52
-    session_max_age: int = 86400 * 7
+    history_weeks: int
+    session_max_age: int
 
-    model_config = SettingsConfigDict(
-        env_prefix="FLOWWATCH_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-    )
+
+@dataclass
+class AdminConfig:
+    username: str
+    password_hash: str
+
+
+@dataclass
+class XuiConfig:
+    db_path: str
+    sync_cron: str
+
+
+@dataclass
+class Settings:
+    app: AppConfig
+    admin: AdminConfig
+    xui: XuiConfig
+    _path: Path = field(default=CONFIG_PATH, repr=False, compare=False)
+
+    @classmethod
+    def load(cls, path: Path = CONFIG_PATH) -> "Settings":
+        with open(path, "rb") as f:
+            data = tomllib.load(f)
+        return cls(
+            app=AppConfig(**data["app"]),
+            admin=AdminConfig(**data["admin"]),
+            xui=XuiConfig(**data["xui"]),
+            _path=path,
+        )
+
+    def save(self) -> None:
+        content = f"""[app]
+secret_key = {self.app.secret_key!r}
+history_weeks = {self.app.history_weeks}
+session_max_age = {self.app.session_max_age}
+
+[admin]
+username = {self.admin.username!r}
+password_hash = {self.admin.password_hash!r}
+
+[xui]
+db_path = {self.xui.db_path!r}
+sync_cron = {self.xui.sync_cron!r}
+"""
+        self._path.write_text(content, encoding="utf-8")

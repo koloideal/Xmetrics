@@ -13,11 +13,11 @@ class AppProvider(Provider):
 
     @provide
     def settings(self) -> Settings:
-        return Settings()
+        return Settings.load()
 
     @provide
     def engine(self, settings: Settings) -> AsyncEngine:
-        return make_engine(settings.app_db_path)
+        return make_engine("./xmetrics.db")
 
     @provide
     def session_factory(self, engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
@@ -29,4 +29,4 @@ class AppProvider(Provider):
 
     @provide
     def xui_reader(self, settings: Settings) -> IXuiReader:
-        return XuiSqliteReader(settings.xui_db_path)
+        return XuiSqliteReader(settings.xui.db_path)

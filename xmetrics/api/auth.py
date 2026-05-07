@@ -1,7 +1,8 @@
+from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Depends, Form, HTTPException, Response, status
 from itsdangerous import URLSafeTimedSerializer
 
-from xmetrics.api.deps import get_serializer, require_session
+from xmetrics.api.deps import require_session
 from xmetrics.core.config import Settings
 from xmetrics.core.security import verify_password
 
@@ -9,25 +10,26 @@ router = APIRouter(tags=["auth"])
 
 
 @router.post("/login")
+@inject
 async def login(
     response: Response,
+    settings: FromDishka[Settings],
     username: str = Form(),
-    password: str = Form(),
-    settings: Settings = Depends(Settings),
-    serializer: URLSafeTimedSerializer = Depends(get_serializer),
+    password: str = Form()
 ) -> dict:
-    if username != settings.admin_username or not verify_password(
-        password, settings.admin_password
+    if username != settings.admin.username or not verify_password(
+        password, settings.admin.password_hash
     ):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    token = serializer.dumps({"username": username})
+    s = URLSafeTimedSerializer(settings.app.secret_key)
+    token = s.dumps({"username": username})
     response.set_cookie(
         key="fw_session",
         value=token,
         httponly=True,
         samesite="lax",
-        max_age=settings.session_max_age,
+        max_age=settings.app.session_max_age,
     )
     return {"ok": True}
 

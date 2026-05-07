@@ -1,0 +1,12 @@
+[app]
+secret_key = "change-me-to-a-random-64-char-string"
+history_weeks = 52
+session_max_age = 604800  
+
+[admin]
+username = "admin"
+password_hash = ""       
+
+[xui]
+db_path = "/etc/x-ui/x-ui.db"
+sync_cron = "0 * * * *"  
