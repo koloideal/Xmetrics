@@ -1,10 +1,21 @@
 [project]
 name = "xmetrics"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
-    "dishka>=1.10.1",
-    "fastapi>=0.136.1",
+    "fastapi[standard]>=0.115",
+    "uvicorn[standard]>=0.30",
+    "dishka>=1.4",
+    "apscheduler>=3.10",
+    "aiosqlite>=0.20",
+    "sqlalchemy[asyncio]>=2.0",
+    "itsdangerous>=2.2",
+    "pydantic-settings>=2.5",
+    "python-multipart>=0.0.9",
+    "passlib[bcrypt]>=1.7",
+    "jinja2>=3.1",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
